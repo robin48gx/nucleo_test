@@ -22,7 +22,13 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#define ARM_MATH_CM4
+#include "arm_math.h"
+//const int16_t  FFTSIZE=1024;
+#define FFTSIZE 1024
+//
+//
+//
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -60,15 +66,53 @@ static void MX_USART2_UART_Init(void);
 static void MX_TIM8_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_TIM3_Init(void);
+
+
+
+
+
 /* USER CODE BEGIN PFP */
+
+
+arm_cfft_radix2_instance_q15 S;
+
+q15_t pData[FFTSIZE*2]={0};
+
+q15_t  cfft_res[FFTSIZE*2];
+
+arm_cfft_radix2_instance_q15 S;
+
+
+
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
-
     asm("   nop");
 }
 
 void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc) {
+	int i;
+	int16_t *ip = cfft_res;
+
 	asm("  nop");
+
+    //for(i=0;i<FFTSIZE*2; i++) {
+    //	cfft_res[i] = 0;
+    //}
+
+	for(i=0;i<FFTSIZE; i++) {
+		*ip++ = pData[i]-2048; //re,im,re,im,re,im............
+	    *ip++ = 0;
+    }
+
+
+	asm("  nop");
+	//arm_cfft_radix2_init_q15 ( S, FFTSIZE, 0, 1);
+    arm_cfft_radix2_init_q15 ( &S, 1024, 0, 1);
+
+
+	arm_cfft_radix2_q15(&S, cfft_res);
+	asm("  nop");
+
 }
 
 
@@ -76,7 +120,7 @@ void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc) {
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-int16_t pData[4096]={0};
+
 /* USER CODE END 0 */
 
 /**
@@ -121,7 +165,7 @@ int i,j,k;
 
    //i = HAL_ADC_Start_DMA(hadc, pData, Length)
    // what what what HAL_ADC_Start_IT(&hadc1);
-   j = HAL_ADC_Start_DMA(&hadc1, (uint32_t*)&pData, 4096);
+   j = HAL_ADC_Start_DMA(&hadc1, (uint32_t*)&pData, FFTSIZE);
    HAL_ADC_MspInit(&hadc1); // missing ingredient to get the DMA actually working
   /* USER CODE END 2 */
 
@@ -135,7 +179,7 @@ int i,j,k;
 
 	  HAL_GPIO_TogglePin(GPIOA, 1<<5);
 	  asm ("   nop");
-	  j = HAL_ADC_Start_DMA(&hadc1, (uint32_t*)&pData, 4096);
+	  j = HAL_ADC_Start_DMA(&hadc1, (uint32_t*)&pData, FFTSIZE);
 	  HAL_Delay(1000); // 1000 is one second
 	  asm ("   nop");
 	  i = htim8.Instance->CNT;
